@@ -8,7 +8,7 @@ SET(g2o_CXX_FLAGS)
 
 # default built type
 IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE Release)
+  SET(CMAKE_BUILD_TYPE Debug)
 ENDIF()
 
 MESSAGE(STATUS "BUILD TYPE:" ${CMAKE_BUILD_TYPE})
@@ -80,6 +80,9 @@ IF(UNIX)
   ADD_DEFINITIONS(-DUNIX)
   MESSAGE(STATUS "Compiling on Unix")
 ENDIF(UNIX)
+
+set(BLAS_LIBRARIES_DIR C:/Libraries/Build/Lapack/lib/Debug/blas.lib)
+set(LAPACK_LIBRARIES_DIR C:/Libraries/Build/Lapack/lib/Debug/lapack.lib)
 
 # For building the CHOLMOD / CSPARSE solvers
 FIND_PACKAGE(BLAS REQUIRED)

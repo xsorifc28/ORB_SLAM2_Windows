@@ -25,7 +25,7 @@
 #include<chrono>
 #include <thread>
 #include <iomanip>
-#include<opencv2/core/core.hpp>
+#include <opencv2/core/core.hpp>
 
 #include"System.h"
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
         cerr << endl << "Usage: ./mono_kitti path_to_vocabulary path_to_settings path_to_sequence" << endl;
         return 1;
     }*/
-	std::string dataPath = "../data/";
+	std::string dataPath = "C:/Libraries/Source/ORB_SLAM2_Windows/Examples/Monocular/data/";
 
 	std::string videoFile = dataPath + "ORBSLAM_Example_Video.mp4";
 	std::string voc = dataPath + "ORBvoc_new.txt";

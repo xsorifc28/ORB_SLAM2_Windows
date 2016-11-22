@@ -79,11 +79,11 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     thread threadRight(&Frame::ExtractORB,this,1,imRight);
     threadLeft.join();
     threadRight.join();
-
+	
+	N = mvKeys.size();
+	
     if(mvKeys.empty())
         return;
-
-    N = mvKeys.size();
 
     UndistortKeyPoints();
 
@@ -311,7 +311,8 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
         return false;
 
     // Predict scale in the image
-    const int nPredictedLevel = pMP->PredictScale(dist,mfLogScaleFactor);
+    const int nPredictedLevel = pMP->PredictScale(dist,this);
+
 
     // Data used by the tracking
     pMP->mbTrackInView = true;
@@ -468,6 +469,8 @@ void Frame::ComputeStereoMatches()
     mvuRight = vector<float>(N,-1.0f);
     mvDepth = vector<float>(N,-1.0f);
 
+	const int thOrbDist = (ORBmatcher::TH_HIGH+ORBmatcher::TH_LOW)/2;
+
     const int nRows = mpORBextractorLeft->mvImagePyramid[0].rows;
 
     //Assign keypoints to row table
@@ -492,7 +495,7 @@ void Frame::ComputeStereoMatches()
 
     // Set limits for search
     const float minZ = mb;
-    const float minD = -3;
+    const float minD = 0;
     const float maxD = mbf/minZ;
 
     // For each left keypoint search a match in the right image
@@ -547,7 +550,7 @@ void Frame::ComputeStereoMatches()
         }
 
         // Subpixel match by correlation
-        if(bestDist<ORBmatcher::TH_HIGH)
+        if(bestDist<thOrbDist)
         {
             // coordinates in image pyramid at keypoint scale
             const float uR0 = mvKeysRight[bestIdxR].pt.x;
@@ -607,7 +610,7 @@ void Frame::ComputeStereoMatches()
 
             float disparity = (uL-bestuR);
 
-            if(disparity>=0 && disparity<maxD)
+            if(disparity>=minD && disparity<maxD)
             {
                 if(disparity<=0)
                 {
