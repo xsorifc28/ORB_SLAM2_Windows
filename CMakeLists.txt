@@ -38,7 +38,7 @@ IF(WIN32)
 ENDIF()
 
 set(OpenCV_STATIC OFF)
-find_package(OpenCV 2.4.3 REQUIRED)
+find_package(OpenCV 3.1.0 REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 
