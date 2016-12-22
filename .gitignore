@@ -1,2 +1,8 @@
-Examples/Monocular/data/
+*.dll
+*.lib
+*.exe
+*.ilk
+*.pdb
+*.exp
+Thirdparty/g2o/config.h
 data/ORBvoc_new.txt
