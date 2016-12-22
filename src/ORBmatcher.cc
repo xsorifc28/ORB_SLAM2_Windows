@@ -58,6 +58,10 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
         if(pMP->isBad())
             continue;
 
+		////Added by AG
+		//if (pMP->mnTrackScaleLevel >= static_cast<int>(F.mvScaleFactors.capacity()))
+		//	continue;
+		//
         const int &nPredictedLevel = pMP->mnTrackScaleLevel;
 
         // The size of the window will depend on the viewing direction
@@ -849,6 +853,8 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
 
         if(pMP->isBad() || pMP->IsInKeyFrame(pKF))
             continue;
+
+
 
         cv::Mat p3Dw = pMP->GetWorldPos();
         cv::Mat p3Dc = Rcw*p3Dw + tcw;

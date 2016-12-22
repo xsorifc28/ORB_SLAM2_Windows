@@ -413,18 +413,17 @@ void LoopClosing::CorrectLoop()
     if(isRunningGBA())
     {
         unique_lock<mutex> lock(mMutexGBA);
+
         mbStopGBA = true;
 
-		while (!isFinishedGBA()) {
-			//usleep(5000);
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		}
+        mnFullBAIdx++;
 
         if(mpThreadGBA)
         {
             mpThreadGBA->detach();
             delete mpThreadGBA;
         }
+
     }
 
     // Wait until Local Mapping has effectively stopped

@@ -400,6 +400,7 @@ int MapPoint::PredictScale(const float &currentDist, KeyFrame* pKF)
         nScale = pKF->mnScaleLevels-1;
 
     return nScale;
+
 }
 
 int MapPoint::PredictScale(const float &currentDist, Frame* pF)
@@ -418,7 +419,6 @@ int MapPoint::PredictScale(const float &currentDist, Frame* pF)
 
     return nScale;
 }
-
 
 
 } //namespace ORB_SLAM

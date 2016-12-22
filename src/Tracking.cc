@@ -1328,6 +1328,7 @@ void Tracking::UpdateLocalKeyFrames()
                 break;
             }
         }
+		itEndKF = mvpLocalKeyFrames.end();
 
     }
 

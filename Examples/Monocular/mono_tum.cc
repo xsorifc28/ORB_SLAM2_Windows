@@ -91,11 +91,11 @@ int main(int argc, char **argv)
 #endif
 
         double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-
-        vTimesTrack[ni]=ttrack;
+*/
+//        vTimesTrack[ni]=ttrack;
 
         // Wait to load the next frame
-        double T=0;
+       /* double T=0;
         if(ni<nImages-1)
             T = vTimestamps[ni+1]-tframe;
         else if(ni>0)
