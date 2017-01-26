@@ -227,6 +227,13 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     AssignFeaturesToGrid();
 }
 
+// Begin ARSL Addition
+std::vector<cv::KeyPoint> Frame::get2DPts()
+{
+	return mvKeysUn;
+}
+// End ARSL Addition
+
 void Frame::AssignFeaturesToGrid()
 {
     int nReserve = 0.5f*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);

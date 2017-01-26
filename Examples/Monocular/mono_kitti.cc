@@ -28,6 +28,7 @@
 #include <opencv2/core/core.hpp>
 
 #include"System.h"
+#include "MapPoint.h"
 
 using namespace std;
 
@@ -44,18 +45,21 @@ int main(int argc, char **argv)
 	std::string dataPath = "C:/Libraries/Source/ORB_SLAM2_Windows/Examples/Monocular/data/";
 
 	std::string videoFile = dataPath + "ORBSLAM_Example_Video.mp4";
+	//std::string videoFile = dataPath + "bust-john-2.mp4";
 	std::string voc = dataPath + "ORBvoc_new.txt";
+	//std::string settings = dataPath + "john-face-settings.yaml";
 	std::string settings = dataPath + "Settings_Complete.yaml";
+	std::string ARSL3D = dataPath + "ARSL3DPts.csv";
 
     // Retrieve paths to images
-    vector<string> vstrImageFilenames;
+	vector<string> vstrImageFilenames;
     vector<double> vTimestamps;
     //LoadImages(string(argv[3]), vstrImageFilenames, vTimestamps);
 
     //int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-	ORB_SLAM2::System SLAM(voc, settings, ORB_SLAM2::System::MONOCULAR, true);
+	ORB_SLAM2::System SLAM(voc, settings, ARSL3D, ORB_SLAM2::System::MONOCULAR, true);
 
     // Vector for tracking time statistics
     vector<double> vTimesTrack;
@@ -89,15 +93,25 @@ int main(int argc, char **argv)
 
 		double ttrack = (double)cv::getTickCount();
 
+		vector<cv::KeyPoint> ARSL2DPts;
+		vector<cv::Point3f> ARSL3DPts;
+
         // Pass the image to the SLAM system
-        SLAM.TrackMonocular(im,tframe);
+        SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
+		ARSL2DPts = SLAM.get2DPts();
+		//vector<ORB_SLAM2::MapPoint*> test = SLAM.OutputAllMapPoints();
+		fstream outputFile;
+		outputFile.open("ORB2DPts.txt", ios::out);
+		for (size_t i = 0; i < ARSL2DPts.size(); i++)
+			outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
+		outputFile.close();
 
 
 		ttrack = 1000 * (((double)cv::getTickCount() - ttrack) / cv::getTickFrequency());
 		//printf("Total: %f\n", ttrack);
 
         //double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-		printf("TRACKED: %f\n", ttrack);
+		//printf("TRACKED: %f\n", ttrack);
         vTimesTrack.push_back(ttrack);
 
         /*// Wait to load the next frame

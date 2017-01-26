@@ -98,6 +98,13 @@ public:
     // Backprojects a keypoint (if stereo/depth info available) into 3D world coordinates.
     cv::Mat UnprojectStereo(const int &i);
 
+
+	// Begin ARSL Addition
+	// Allows for MATLAB wrapper to retreive the 2D points
+	std::vector<cv::KeyPoint> get2DPts();
+	// End ARSL Addition
+
+
 public:
     // Vocabulary used for relocalization.
     ORBVocabulary* mpORBvocabulary;

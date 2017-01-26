@@ -43,7 +43,7 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
-Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
+Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const string &str3DPtsFile,const int sensor):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
@@ -55,6 +55,28 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     float fy = fSettings["Camera.fy"];
     float cx = fSettings["Camera.cx"];
     float cy = fSettings["Camera.cy"];
+
+	string line;
+	ifstream ARSL3DPts(str3DPtsFile);
+	while (ARSL3DPts.good())
+	{
+		getline(ARSL3DPts, line);
+
+		stringstream ss(line);
+		string field;
+		float coord[3];
+		int inc = 0;
+		while (getline(ss, field, ','))
+		{
+			stringstream fs(field);
+			fs >> coord[inc];
+			inc++;
+			if (inc > 2)
+				inc = 0;
+		}
+
+		mvARSL3DPts.push_back(cv::Point3f(coord[0], coord[1], coord[2]));
+	}
 
     cv::Mat K = cv::Mat::eye(3,3,CV_32F);
     K.at<float>(0,0) = fx;
@@ -198,7 +220,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 
     mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track();
+	//Track();
 
     return mCurrentFrame.mTcw.clone();
 }
@@ -229,13 +251,13 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
 
     mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track();
+    //Track();
 
     return mCurrentFrame.mTcw.clone();
 }
 
-
-cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
+// ARSL Modification, allows for 2D points to be inserted
+cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts)
 {
     mImGray = im;
 
@@ -259,12 +281,13 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     else
         mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track();
+    Track(ARSL2Dpts, ARSL3Dpts);
 
     return mCurrentFrame.mTcw.clone();
 }
 
-void Tracking::Track()
+// ARSL Modification, allows for 2D points to be inserted
+void Tracking::Track(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts)
 {
     if(mState==NO_IMAGES_YET)
     {
@@ -281,7 +304,7 @@ void Tracking::Track()
         if(mSensor==System::STEREO || mSensor==System::RGBD)
             StereoInitialization();
         else
-            MonocularInitialization();
+            MonocularInitialization(ARSL2Dpts, ARSL3Dpts);
 
         mpFrameDrawer->Update(this);
 
@@ -560,79 +583,162 @@ void Tracking::StereoInitialization()
     }
 }
 
-void Tracking::MonocularInitialization()
+//void Tracking::MonocularInitialization()
+//{
+//
+//    if(!mpInitializer)
+//    {
+//        // Set Reference Frame
+//        if(mCurrentFrame.mvKeys.size()>100)
+//        {
+//            mInitialFrame = Frame(mCurrentFrame);
+//            mLastFrame = Frame(mCurrentFrame);
+//            mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
+//            for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
+//                mvbPrevMatched[i]=mCurrentFrame.mvKeysUn[i].pt;
+//
+//            if(mpInitializer)
+//                delete mpInitializer;
+//
+//            mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
+//
+//            fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
+//
+//            return;
+//        }
+//    }
+//    else
+//    {
+//        // Try to initialize
+//        if((int)mCurrentFrame.mvKeys.size()<=100)
+//        {
+//            delete mpInitializer;
+//            mpInitializer = static_cast<Initializer*>(NULL);
+//            fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
+//            return;
+//        }
+//
+//        // Find correspondences
+//        ORBmatcher matcher(0.9,true);
+//        int nmatches = matcher.SearchForInitialization(mInitialFrame,mCurrentFrame,mvbPrevMatched,mvIniMatches,100);
+//
+//        // Check if there are enough correspondences
+//        if(nmatches<100)
+//        {
+//            delete mpInitializer;
+//            mpInitializer = static_cast<Initializer*>(NULL);
+//            return;
+//        }
+//
+//        cv::Mat Rcw; // Current Camera Rotation
+//        cv::Mat tcw; // Current Camera Translation
+//        vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
+//
+//        if(mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
+//        {
+//            for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
+//            {
+//                if(mvIniMatches[i]>=0 && !vbTriangulated[i])
+//                {
+//                    mvIniMatches[i]=-1;
+//                    nmatches--;
+//                }
+//            }
+//
+//            // Set Frame Poses
+//            mInitialFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
+//            cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
+//            Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
+//            tcw.copyTo(Tcw.rowRange(0,3).col(3));
+//            mCurrentFrame.SetPose(Tcw);
+//
+//            CreateInitialMapMonocular();
+//        }
+//    }
+//}
+
+// Begin ARSL Modification allows for 2D and 3D points to be inserted
+void Tracking::MonocularInitialization(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts)
 {
 
-    if(!mpInitializer)
-    {
-        // Set Reference Frame
-        if(mCurrentFrame.mvKeys.size()>100)
-        {
-            mInitialFrame = Frame(mCurrentFrame);
-            mLastFrame = Frame(mCurrentFrame);
-            mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
-            for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
-                mvbPrevMatched[i]=mCurrentFrame.mvKeysUn[i].pt;
+	if (!mpInitializer)
+	{
+		// Set Reference Frame
+		if (mCurrentFrame.mvKeys.size()>100)
+		{
+			mInitialFrame = Frame(mCurrentFrame);
+			mLastFrame = Frame(mCurrentFrame);
+			mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
+			for (size_t i = 0; i<mCurrentFrame.mvKeysUn.size(); i++)
+				mvbPrevMatched[i] = mCurrentFrame.mvKeysUn[i].pt;
 
-            if(mpInitializer)
-                delete mpInitializer;
+			if (mpInitializer)
+				delete mpInitializer;
 
-            mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
+			mpInitializer = new Initializer(mCurrentFrame, 1.0, 200);
 
-            fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
+			fill(mvIniMatches.begin(), mvIniMatches.end(), -1);
 
-            return;
-        }
-    }
-    else
-    {
-        // Try to initialize
-        if((int)mCurrentFrame.mvKeys.size()<=100)
-        {
-            delete mpInitializer;
-            mpInitializer = static_cast<Initializer*>(NULL);
-            fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
-            return;
-        }
+			return;
+		}
+	}
+	else
+	{
+		// Try to initialize
+		if ((int)mCurrentFrame.mvKeys.size() <= 100)
+		{
+			delete mpInitializer;
+			mpInitializer = static_cast<Initializer*>(NULL);
+			fill(mvIniMatches.begin(), mvIniMatches.end(), -1);
+			return;
+		}
 
-        // Find correspondences
-        ORBmatcher matcher(0.9,true);
-        int nmatches = matcher.SearchForInitialization(mInitialFrame,mCurrentFrame,mvbPrevMatched,mvIniMatches,100);
+		// Find correspondences
+		ORBmatcher matcher(0.9, true);
+		int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, mvbPrevMatched, mvIniMatches, 100);
 
-        // Check if there are enough correspondences
-        if(nmatches<100)
-        {
-            delete mpInitializer;
-            mpInitializer = static_cast<Initializer*>(NULL);
-            return;
-        }
+		// Check if there are enough correspondences
+		if (nmatches<100)
+		{
+			delete mpInitializer;
+			mpInitializer = static_cast<Initializer*>(NULL);
+			return;
+		}
 
-        cv::Mat Rcw; // Current Camera Rotation
-        cv::Mat tcw; // Current Camera Translation
-        vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
+		cv::Mat Rcw; // Current Camera Rotation
+		cv::Mat tcw; // Current Camera Translation
+		vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
 
-        if(mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
-        {
-            for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
-            {
-                if(mvIniMatches[i]>=0 && !vbTriangulated[i])
-                {
-                    mvIniMatches[i]=-1;
-                    nmatches--;
-                }
-            }
+		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated, mvARSL3DPts))
+		{
+			for (size_t i = 0, iend = mvIniMatches.size(); i<iend; i++)
+			{
+				if (mvIniMatches[i] >= 0 && !vbTriangulated[i])
+				{
+					mvIniMatches[i] = -1;
+					nmatches--;
+				}
+			}
 
-            // Set Frame Poses
-            mInitialFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
-            cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
-            Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
-            tcw.copyTo(Tcw.rowRange(0,3).col(3));
-            mCurrentFrame.SetPose(Tcw);
+			// Set Frame Poses
+			mInitialFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
+			cv::Mat Tcw = cv::Mat::eye(4, 4, CV_32F);
+			Rcw.copyTo(Tcw.rowRange(0, 3).colRange(0, 3));
+			tcw.copyTo(Tcw.rowRange(0, 3).col(3));
+			mCurrentFrame.SetPose(Tcw);
 
-            CreateInitialMapMonocular();
-        }
-    }
+			CreateInitialMapMonocular();
+		}
+	}
 }
+// End ARSL Modification
+
+// Begin ARSL Addition
+void Tracking::set3DPoints(std::vector<cv::Point3f> ARSL3DPts)
+{
+	mvIniP3D = ARSL3DPts;
+}
+// End ARSL Addition
 
 void Tracking::CreateInitialMapMonocular()
 {

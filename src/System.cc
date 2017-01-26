@@ -30,7 +30,7 @@
 namespace ORB_SLAM2
 {
 
-System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
+System::System(const string &strVocFile, const string &strSettingsFile, const string &str3DPtsFile,const eSensor sensor,
                const bool bUseViewer):mSensor(sensor),mbReset(false),mbActivateLocalizationMode(false),
         mbDeactivateLocalizationMode(false)
 {
@@ -85,7 +85,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                             mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor);
+                             mpMap, mpKeyFrameDatabase, strSettingsFile, str3DPtsFile, mSensor);
 
     //Initialize the Local Mapping thread and launch
     mpLocalMapper = new LocalMapping(mpMap, mSensor==MONOCULAR);
@@ -204,8 +204,8 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     return mpTracker->GrabImageRGBD(im,depthmap,timestamp);
 }
-
-cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
+// ARSL Modification, allows for input of 2D points
+cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts)
 {
     if(mSensor!=MONOCULAR)
     {
@@ -248,8 +248,28 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     }
     }
 
-    return mpTracker->GrabImageMonocular(im,timestamp);
+    return mpTracker->GrabImageMonocular(im,timestamp, ARSL2Dpts, ARSL3Dpts);
 }
+
+
+// Begin ARSL Addition
+std::vector<MapPoint*> System::OutputAllMapPoints()
+{
+	return mpMap->GetAllMapPoints();
+}
+
+std::vector<cv::KeyPoint> System::get2DPts()
+{
+	return mpTracker->mCurrentFrame.get2DPts();
+}
+
+void System::set3DPts(std::vector<cv::Point3f> ARSL3DPts)
+{
+	
+	mpTracker->set3DPoints(ARSL3DPts);
+	
+}
+// End ARSL Addition
 
 void System::ActivateLocalizationMode()
 {

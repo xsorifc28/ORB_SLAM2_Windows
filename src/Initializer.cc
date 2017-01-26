@@ -42,82 +42,89 @@ Initializer::Initializer(const Frame &ReferenceFrame, float sigma, int iteration
 }
 
 bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12, cv::Mat &R21, cv::Mat &t21,
-                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
+                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point3f> &vARSL3DPts)
 {
-    // Fill structures with current keypoints and matches with reference frame
+	mvKeys2 = CurrentFrame.mvKeysUn;
+	
+	return false;
+
+	// Fill structures with current keypoints and matches with reference frame
     // Reference Frame: 1, Current Frame: 2
-    mvKeys2 = CurrentFrame.mvKeysUn;
 
-    mvMatches12.clear();
-    mvMatches12.reserve(mvKeys2.size());
-    mvbMatched1.resize(mvKeys1.size());
-    for(size_t i=0, iend=vMatches12.size();i<iend; i++)
-    {
-        if(vMatches12[i]>=0)
-        {
-            mvMatches12.push_back(make_pair(i,vMatches12[i]));
-            mvbMatched1[i]=true;
-        }
-        else
-            mvbMatched1[i]=false;
-    }
+    //mvKeys2 = CurrentFrame.mvKeysUn;
 
-    const int N = mvMatches12.size();
+    //mvMatches12.clear();
+    //mvMatches12.reserve(mvKeys2.size());
+    //mvbMatched1.resize(mvKeys1.size());
+    //for(size_t i=0, iend=vMatches12.size();i<iend; i++)
+    //{
+    //    if(vMatches12[i]>=0)
+    //    {
+    //        mvMatches12.push_back(make_pair(i,vMatches12[i]));
+    //        mvbMatched1[i]=true;
+    //    }
+    //    else
+    //        mvbMatched1[i]=false;
+    //}
 
-    // Indices for minimum set selection
-    vector<size_t> vAllIndices;
-    vAllIndices.reserve(N);
-    vector<size_t> vAvailableIndices;
+    //const int N = mvMatches12.size();
 
-    for(int i=0; i<N; i++)
-    {
-        vAllIndices.push_back(i);
-    }
+    //// Indices for minimum set selection
+    //vector<size_t> vAllIndices;
+    //vAllIndices.reserve(N);
+    //vector<size_t> vAvailableIndices;
 
-    // Generate sets of 8 points for each RANSAC iteration
-    mvSets = vector< vector<size_t> >(mMaxIterations,vector<size_t>(8,0));
+    //for(int i=0; i<N; i++)
+    //{
+    //    vAllIndices.push_back(i);
+    //}
 
-    DUtils::Random::SeedRandOnce(0);
+    //// Generate sets of 8 points for each RANSAC iteration
+    //mvSets = vector< vector<size_t> >(mMaxIterations,vector<size_t>(8,0));
 
-    for(int it=0; it<mMaxIterations; it++)
-    {
-        vAvailableIndices = vAllIndices;
+    //DUtils::Random::SeedRandOnce(0);
 
-        // Select a minimum set
-        for(size_t j=0; j<8; j++)
-        {
-            int randi = DUtils::Random::RandomInt(0,vAvailableIndices.size()-1);
-            int idx = vAvailableIndices[randi];
+    //for(int it=0; it<mMaxIterations; it++)
+    //{
+    //    vAvailableIndices = vAllIndices;
 
-            mvSets[it][j] = idx;
+    //    // Select a minimum set
+    //    for(size_t j=0; j<8; j++)
+    //    {
+    //        int randi = DUtils::Random::RandomInt(0,vAvailableIndices.size()-1);
+    //        int idx = vAvailableIndices[randi];
 
-            vAvailableIndices[randi] = vAvailableIndices.back();
-            vAvailableIndices.pop_back();
-        }
-    }
+    //        mvSets[it][j] = idx;
 
-    // Launch threads to compute in parallel a fundamental matrix and a homography
-    vector<bool> vbMatchesInliersH, vbMatchesInliersF;
-    float SH, SF;
-    cv::Mat H, F;
+    //        vAvailableIndices[randi] = vAvailableIndices.back();
+    //        vAvailableIndices.pop_back();
+    //    }
+    //}
 
-    thread threadH(&Initializer::FindHomography,this,ref(vbMatchesInliersH), ref(SH), ref(H));
-    thread threadF(&Initializer::FindFundamental,this,ref(vbMatchesInliersF), ref(SF), ref(F));
+    //// Launch threads to compute in parallel a fundamental matrix and a homography
+    //vector<bool> vbMatchesInliersH, vbMatchesInliersF;
+    //float SH, SF;
+    //cv::Mat H, F;
 
-    // Wait until both threads have finished
-    threadH.join();
-    threadF.join();
+    //thread threadH(&Initializer::FindHomography,this,ref(vbMatchesInliersH), ref(SH), ref(H));
+    //thread threadF(&Initializer::FindFundamental,this,ref(vbMatchesInliersF), ref(SF), ref(F));
 
-    // Compute ratio of scores
-    float RH = SH/(SH+SF);
+    //// Wait until both threads have finished
+    //threadH.join();
+    //threadF.join();
 
-    // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
-    if(RH>0.40)
-        return ReconstructH(vbMatchesInliersH,H,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
-    else //if(pF_HF>0.6)
-        return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
+    //// Compute ratio of scores
+    //float RH = SH/(SH+SF);
 
-    return false;
+    //// Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
+    //if(RH>0.40)
+    //    return ReconstructH(vbMatchesInliersH,H,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
+    //else //if(pF_HF>0.6)
+    //    return ReconstructF(vbMatchesInliersF,F,mK,R21,t21,vP3D,vbTriangulated,1.0,50);
+
+    //return false;
+
+	
 }
 
 

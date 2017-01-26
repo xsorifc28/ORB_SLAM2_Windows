@@ -74,6 +74,8 @@ int main(int argc, char **argv)
                  << string(argv[3]) << "/" << vstrImageFilenames[ni] << endl;
             return 1;
         }
+		vector<cv::KeyPoint> ARSL2DPts;
+		vector<cv::Point3f> ARSL3DPts;
 /*
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
@@ -82,7 +84,14 @@ int main(int argc, char **argv)
 #endif
 */
         // Pass the image to the SLAM system
-        SLAM.TrackMonocular(im,tframe);
+        SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
+		ARSL2DPts = SLAM.get2DPts();
+		
+		fstream outputFile;
+		outputFile.open("ORB2DPts.txt", ios::out);
+		for (size_t i = 0; i < ARSL2DPts.size(); i++)
+			outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
+		outputFile.close();
 /*
 #ifdef COMPILEDWITHC11
         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();

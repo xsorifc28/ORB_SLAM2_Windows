@@ -55,12 +55,12 @@ class Tracking
 
 public:
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Map* pMap,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor);
+             KeyFrameDatabase* pKFDB, const string &strSettingPath, const string &str3DPtsFile, const int sensor);
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
-    cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
+    cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
     void SetLoopClosing(LoopClosing* pLoopClosing);
@@ -101,6 +101,7 @@ public:
     std::vector<int> mvIniMatches;
     std::vector<cv::Point2f> mvbPrevMatched;
     std::vector<cv::Point3f> mvIniP3D;
+	std::vector<cv::Point3f> mvARSL3DPts;
     Frame mInitialFrame;
 
     // Lists used to recover the full camera trajectory at the end of the execution.
@@ -112,19 +113,25 @@ public:
 
     // True if local mapping is deactivated and we are performing only localization
     bool mbOnlyTracking;
-
+	
     void Reset();
+
+	// Begin ARSL Addition
+	// Allows for MATLAB wrapper to set the 3D points
+	// Using this, ARSL can find the depth instead of ORBSLAM
+	void set3DPoints(std::vector<cv::Point3f> ARSL3Dpts);
+	// End ARSL Addition
 
 protected:
 
     // Main tracking function. It is independent of the input sensor.
-    void Track();
+    void Track(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts);
 
     // Map initialization for stereo and RGB-D
     void StereoInitialization();
 
     // Map initialization for monocular
-    void MonocularInitialization();
+    void MonocularInitialization(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts);
     void CreateInitialMapMonocular();
 
     void CheckReplacedInLastFrame();
