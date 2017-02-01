@@ -43,7 +43,7 @@ cv::Mat FrameDrawer::DrawFrame()
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
     vector<bool> vbVO, vbMap; // Tracked MapPoints in current frame
     int state; // Tracking state
-	int Num;
+
     //Copy variables within scoped mutex
     {
         unique_lock<mutex> lock(mMutex);
@@ -64,7 +64,6 @@ cv::Mat FrameDrawer::DrawFrame()
             vCurrentKeys = mvCurrentKeys;
             vbVO = mvbVO;
             vbMap = mvbMap;
-			Num = N;
         }
         else if(mState==Tracking::LOST)
         {
@@ -92,8 +91,8 @@ cv::Mat FrameDrawer::DrawFrame()
         mnTracked=0;
         mnTrackedVO=0;
         const float r = 5;
-        //for(int i=0;i<numb;i++)
-		for (int i = 0; i<Num; i++)
+        const int n = vCurrentKeys.size();
+        for(int i=0;i<n;i++)
         {
             if(vbVO[i] || vbMap[i])
             {

@@ -3,28 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 set(PROJECTNAME dbow2)
 project(${PROJECTNAME})
 
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3 -march=native")
 
-# set(HDRS_DBOW2
-  # DBoW2/BowVector.h
-  # DBoW2/FORB.h 
-  # DBoW2/FClass.h       
-  # DBoW2/FeatureVector.h
-  # DBoW2/ScoringObject.h   
-  # DBoW2/TemplatedVocabulary.h)
-# set(SRCS_DBOW2
-  # DBoW2/BowVector.cpp
-  # DBoW2/FORB.cpp      
-  # DBoW2/FeatureVector.cpp
-  # DBoW2/ScoringObject.cpp)
-
-# set(HDRS_DUTILS
-  # DUtils/Random.h
-  # DUtils/Timestamp.h)
-# set(SRCS_DUTILS
-  # DUtils/Random.cpp
-  # DUtils/Timestamp.cpp)
 
 file(GLOB_RECURSE  headers "dbow2/*.h") #_RECURSE
 file(GLOB_RECURSE  sources "dbow2/*.cpp") #_RECURSE
@@ -59,12 +38,12 @@ message("\n")
 message("Searching for OpenCV:")
 set(OpenCV_STATIC OFF)
 # set(ENV_OPENCV_DIR $ENV{OPENCV_DIR})
-find_package(OpenCV REQUIRED)
-if(OpenCV_FOUND)
-	message("OpenCV successfully added!")
-else()
-	message(FATAL_ERROR "OpenCV was not found!")
-endif()
+find_package(OpenCV 3.2.0 QUIET)
+if(NOT OpenCV_FOUND)
+   find_package(OpenCV 2.4.3 QUIET)
+   if(NOT OpenCV_FOUND)
+      message(FATAL_ERROR "OpenCV > 2.4.3 not found.")
+   endif()
 
 # postfix, based on type
 SET(CMAKE_DEBUG_POSTFIX "_d" CACHE STRING "postfix applied to debug build of libraries")
@@ -83,16 +62,7 @@ ELSEIF(CMAKE_BUILD_TYPE MATCHES MinSizeRel)
 ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
 
 
-include_directories(
-	${OpenCV_INCLUDE_DIRS}
-)
-
-add_library(${PROJECTNAME} SHARED 
-	${PROJECT_HEADERS} 
-	${PROJECT_SOURCES} 
-)
-
-target_link_libraries(${PROJECTNAME} 
-	${OpenCV_LIBS}
-)
+include_directories(${OpenCV_INCLUDE_DIRS})
+add_library(${PROJECTNAME} SHARED ${PROJECT_HEADERS} ${PROJECT_SOURCES} )
+target_link_libraries(${PROJECTNAME} ${OpenCV_LIBS})
 

@@ -31,7 +31,7 @@ namespace ORB_SLAM2
 {
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
-               const bool bUseViewer):mSensor(sensor),mbReset(false),mbActivateLocalizationMode(false),
+               const bool bUseViewer):mSensor(sensor), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false),mbActivateLocalizationMode(false),
         mbDeactivateLocalizationMode(false)
 {
     // Output welcome message
@@ -96,11 +96,12 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
 
     //Initialize the Viewer thread and launch
-    mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
     if(bUseViewer)
+    {
+        mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
         mptViewer = new thread(&Viewer::Run, mpViewer);
-
-    mpTracker->SetViewer(mpViewer);
+        mpTracker->SetViewer(mpViewer);
+    }
 
     //Set pointers between threads
     mpTracker->SetLocalMapper(mpLocalMapper);
@@ -156,7 +157,13 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     }
     }
 
-    return mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
+    cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
+
+    unique_lock<mutex> lock2(mMutexState);
+    mTrackingState = mpTracker->mState;
+    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
+    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+    return Tcw;
 }
 
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
@@ -202,7 +209,13 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     }
     }
 
-    return mpTracker->GrabImageRGBD(im,depthmap,timestamp);
+    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp);
+
+    unique_lock<mutex> lock2(mMutexState);
+    mTrackingState = mpTracker->mState;
+    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
+    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+    return Tcw;
 }
 
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
@@ -248,7 +261,14 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     }
     }
 
-    return mpTracker->GrabImageMonocular(im,timestamp);
+    cv::Mat Tcw = mpTracker->GrabImageMonocular(im,timestamp);
+
+    unique_lock<mutex> lock2(mMutexState);
+    mTrackingState = mpTracker->mState;
+    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
+    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+
+    return Tcw;
 }
 
 void System::ActivateLocalizationMode()
@@ -263,6 +283,19 @@ void System::DeactivateLocalizationMode()
     mbDeactivateLocalizationMode = true;
 }
 
+bool System::MapChanged()
+{
+    static int n=0;
+    int curn = mpMap->GetLastBigChangeIdx();
+    if(n<curn)
+    {
+        n=curn;
+        return true;
+    }
+    else
+        return false;
+}
+
 void System::Reset()
 {
     unique_lock<mutex> lock(mMutexReset);
@@ -273,17 +306,22 @@ void System::Shutdown()
 {
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
-    mpViewer->RequestFinish();
+    if(mpViewer)
+    {
+        mpViewer->RequestFinish();
+        while(!mpViewer->isFinished())
+            usleep(5000);
+    }
 
     // Wait until all thread have effectively stopped
-    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished()  ||
-          !mpViewer->isFinished()      || mpLoopCloser->isRunningGBA())
+    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
     {
         //usleep(5000);
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
-    pangolin::BindToContext("ORB-SLAM2: Map Viewer");
+    if(mpViewer)
+        pangolin::BindToContext("ORB-SLAM2: Map Viewer");
 }
 
 void System::SaveTrajectoryTUM(const string &filename)
@@ -436,6 +474,24 @@ void System::SaveTrajectoryKITTI(const string &filename)
     }
     f.close();
     cout << endl << "trajectory saved!" << endl;
+}
+
+int System::GetTrackingState()
+{
+    unique_lock<mutex> lock(mMutexState);
+    return mTrackingState;
+}
+
+vector<MapPoint*> System::GetTrackedMapPoints()
+{
+    unique_lock<mutex> lock(mMutexState);
+    return mTrackedMapPoints;
+}
+
+vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
+{
+    unique_lock<mutex> lock(mMutexState);
+    return mTrackedKeyPointsUn;
 }
 
 } //namespace ORB_SLAM
