@@ -310,13 +310,12 @@ void System::Shutdown()
     {
         mpViewer->RequestFinish();
         while(!mpViewer->isFinished())
-            usleep(5000);
-    }
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
 
     // Wait until all thread have effectively stopped
     while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
     {
-        //usleep(5000);
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 
