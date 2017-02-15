@@ -34,16 +34,15 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${dbow2_RUNTIME_OUTPUT_DIRECTORY})
 ##-------------------------------------------------
 ## Detect OpenCV:
 ##-------------------------------------------------
-message("\n")
-message("Searching for OpenCV:")
 set(OpenCV_STATIC OFF)
 # set(ENV_OPENCV_DIR $ENV{OPENCV_DIR})
-find_package(OpenCV 3.2.0 QUIET)
+find_package(OpenCV 3.0 QUIET)
 if(NOT OpenCV_FOUND)
    find_package(OpenCV 2.4.3 QUIET)
    if(NOT OpenCV_FOUND)
       message(FATAL_ERROR "OpenCV > 2.4.3 not found.")
    endif()
+endif()
 
 # postfix, based on type
 SET(CMAKE_DEBUG_POSTFIX "_d" CACHE STRING "postfix applied to debug build of libraries")
