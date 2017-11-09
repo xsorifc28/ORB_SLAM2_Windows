@@ -44,23 +44,28 @@ int main(int argc, char **argv)
     }*/
 	std::string dataPath = "C:/Libraries/Source/ORB_SLAM2_Windows/Examples/Monocular/data/";
 
-	std::string videoFile = dataPath + "ORBSLAM_Example_Video.mp4";
-	//std::string videoFile = dataPath + "bust-john-2.mp4";
+	//std::string videoFile = dataPath + "ORBSLAM_Example_Video.mp4";
+	std::string videoFile = dataPath + "john-face.mp4";
+	//std::string videoFile = dataPath + "bust.mp4";
 	std::string voc = dataPath + "ORBvoc_new.txt";
-	//std::string settings = dataPath + "john-face-settings.yaml";
-	std::string settings = dataPath + "Settings_Complete.yaml";
+	std::string settings = dataPath + "john-face-settings.yaml";
+	//std::string settings = dataPath + "Settings_Complete.yaml";
+	//std::string settings = dataPath + "2-14-calib.yaml";
 	std::string ARSL3D = dataPath + "ARSL3DPts.csv";
+	std::string ARSL2D = dataPath + "ARSL2DPts.csv";
+
+	std::string ARIm = dataPath + "ARIm.png";
 
     // Retrieve paths to images
 	vector<string> vstrImageFilenames;
     vector<double> vTimestamps;
     //LoadImages(string(argv[3]), vstrImageFilenames, vTimestamps);
-
+	cv::Mat dispIm = cv::imread(ARIm, CV_LOAD_IMAGE_COLOR);
     //int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-	ORB_SLAM2::System SLAM(voc, settings, ARSL3D, ORB_SLAM2::System::MONOCULAR, true);
-
+	ORB_SLAM2::System SLAM(voc, settings, ARSL3D, ARSL2D, dispIm, ORB_SLAM2::System::MONOCULAR, true);
+	//ORB_SLAM2::System SLAM(voc, settings, ORB_SLAM2::System::MONOCULAR, true);
     // Vector for tracking time statistics
     vector<double> vTimesTrack;
     //vTimesTrack.resize(nImages);
@@ -100,11 +105,12 @@ int main(int argc, char **argv)
         SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
 		ARSL2DPts = SLAM.get2DPts();
 		//vector<ORB_SLAM2::MapPoint*> test = SLAM.OutputAllMapPoints();
-		fstream outputFile;
-		outputFile.open("ORB2DPts.txt", ios::out);
-		for (size_t i = 0; i < ARSL2DPts.size(); i++)
-			outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
-		outputFile.close();
+
+		//fstream outputFile;
+		//outputFile.open("ORB2DPts.txt", ios::out);
+		//for (size_t i = 0; i < ARSL2DPts.size(); i++)
+		//	outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
+		//outputFile.close();
 
 
 		ttrack = 1000 * (((double)cv::getTickCount() - ttrack) / cv::getTickFrequency());
@@ -142,7 +148,7 @@ int main(int argc, char **argv)
 	cout << "mean tracking time: " << totaltime / ((double)vTimesTrack.size()) << endl;
 
     // Save camera trajectory
-    //SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
     return 0;
 }

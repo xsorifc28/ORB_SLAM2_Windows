@@ -54,13 +54,16 @@ class Tracking
 {  
 
 public:
+	Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Map* pMap,
+		KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor);
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Map* pMap,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const string &str3DPtsFile, const int sensor);
+             KeyFrameDatabase* pKFDB, const string &strSettingPath, const string &str3DPtsFile, const string &str2DPtsFile, const int sensor);
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts);
+	cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
     void SetLoopClosing(LoopClosing* pLoopClosing);
@@ -102,6 +105,7 @@ public:
     std::vector<cv::Point2f> mvbPrevMatched;
     std::vector<cv::Point3f> mvIniP3D;
 	std::vector<cv::Point3f> mvARSL3DPts;
+	std::vector<cv::Point2f> mvARSL2DPts;
     Frame mInitialFrame;
 
     // Lists used to recover the full camera trajectory at the end of the execution.
@@ -126,12 +130,13 @@ protected:
 
     // Main tracking function. It is independent of the input sensor.
     void Track(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts);
-
+	void Track();
     // Map initialization for stereo and RGB-D
     void StereoInitialization();
 
     // Map initialization for monocular
     void MonocularInitialization(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3f> ARSL3Dpts);
+	void MonocularInitialization();
     void CreateInitialMapMonocular();
 
     void CheckReplacedInLastFrame();

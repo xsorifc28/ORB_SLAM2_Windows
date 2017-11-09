@@ -42,14 +42,68 @@ Initializer::Initializer(const Frame &ReferenceFrame, float sigma, int iteration
 }
 
 bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12, cv::Mat &R21, cv::Mat &t21,
-                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point3f> &vARSL3DPts)
+                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point2f> &vARSL2DPts, vector<cv::Point3f> &vARSL3DPts)
 {
-	mvKeys2 = CurrentFrame.mvKeysUn;
+	mvKeys1 = CurrentFrame.mvKeysUn;
+	float minX = vARSL2DPts[0].x; float minY = vARSL2DPts[0].y; float maxX = minX; float maxY = minY;
 	
-	return false;
+	for (size_t i = 0, iend = vARSL2DPts.size(); i < iend; i++)
+	{
+		if (vARSL2DPts[i].x < minX)
+			minX = vARSL2DPts[i].x;
+		if (vARSL2DPts[i].y < minY)
+			minY = vARSL2DPts[i].y;
+		if (vARSL2DPts[i].x > maxX)
+			maxX = vARSL2DPts[i].x;
+		if (vARSL2DPts[i].y > maxY)
+			maxY = vARSL2DPts[i].y;
+	}
 
-	// Fill structures with current keypoints and matches with reference frame
-    // Reference Frame: 1, Current Frame: 2
+	for (size_t i = 0, iend = mvKeys1.size(); i < iend; i++)
+	{
+		cv::KeyPoint curSLAMPt = mvKeys1[i];
+		
+		if (curSLAMPt.pt.x < minX || curSLAMPt.pt.x > maxX || curSLAMPt.pt.y < minY || curSLAMPt.pt.x > maxX)
+		{
+			vP3D.push_back(cv::Point3f(0.0f, 0.0f, 0.0f));
+			vbTriangulated.push_back(false);
+			continue;
+		}
+		
+		for (size_t j = 0, jend = vARSL3DPts.size(); j < jend; j++)
+		{
+			cv::Point2f curARSL2DPt = vARSL2DPts[j];
+			cv::Point3f curARSL3DPt = vARSL3DPts[j];
+			if (cv::norm(cv::Point2f(curSLAMPt.pt.x, curSLAMPt.pt.y) - cv::Point2f(curARSL2DPt.x, curARSL2DPt.y)) < 1)//((mvKeys2[i].pt.x - vARSL3DPts[j].x) < 1) && ((mvKeys2[i].pt.y - vARSL3DPts[j].y) < 1))
+			{
+				vP3D.push_back(curARSL3DPt);
+				vbTriangulated.push_back(true);
+				break;
+			}
+			else if (j == (jend - 1))
+			{
+				vP3D.push_back(cv::Point3f(0.0f, 0.0f, 0.0f));
+				vbTriangulated.push_back(false);
+			}
+			
+		}
+
+	}
+
+	if (vbTriangulated.size() < vMatches12.size())
+		for (size_t i = 0, iend = vMatches12.size() - vbTriangulated.size(); i < iend; i++)
+			vbTriangulated.push_back(false);
+	else if (vbTriangulated.size() > vMatches12.size())
+		for (size_t i = 0, iend = vbTriangulated.size() - vMatches12.size(); i < iend; i++)
+			vbTriangulated.pop_back();
+
+
+	R21 = cv::Mat::eye(3, 3, CV_32F);
+	t21 = cv::Mat::zeros(3, 1, CV_32F);
+	return true;
+
+	//Fill structures with current keypoints and matches with reference frame
+    //Reference Frame: 1, Current Frame: 2
 
     //mvKeys2 = CurrentFrame.mvKeysUn;
 

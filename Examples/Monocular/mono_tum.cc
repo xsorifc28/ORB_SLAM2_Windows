@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
+    ORB_SLAM2::System SLAM(argv[1],argv[2], ORB_SLAM2::System::MONOCULAR,true);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;
@@ -84,23 +84,23 @@ int main(int argc, char **argv)
 #endif
 */
         // Pass the image to the SLAM system
-        SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
-		ARSL2DPts = SLAM.get2DPts();
-		
-		fstream outputFile;
-		outputFile.open("ORB2DPts.txt", ios::out);
-		for (size_t i = 0; i < ARSL2DPts.size(); i++)
-			outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
-		outputFile.close();
-/*
-#ifdef COMPILEDWITHC11
-        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-#else
-        std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
-#endif
-
-        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-*/
+        SLAM.TrackMonocular(im,tframe);
+		//ARSL2DPts = SLAM.get2DPts();
+//		
+//		fstream outputFile;
+//		outputFile.open("ORB2DPts.txt", ios::out);
+//		for (size_t i = 0; i < ARSL2DPts.size(); i++)
+//			outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
+//		outputFile.close();
+///*
+//#ifdef COMPILEDWITHC11
+//        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//#else
+//        std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+//#endif
+//
+//        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+//*/
 //        vTimesTrack[ni]=ttrack;
 
         // Wait to load the next frame
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     cout << "mean tracking time: " << totaltime/nImages << endl;
 
     // Save camera trajectory
-    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+   // SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
     return 0;
 }

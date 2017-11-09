@@ -42,8 +42,110 @@ using namespace std;
 
 namespace ORB_SLAM2
 {
+	Tracking::Tracking(System * pSys, ORBVocabulary * pVoc, FrameDrawer * pFrameDrawer, MapDrawer * pMapDrawer, Map * pMap, KeyFrameDatabase * pKFDB, const string & strSettingPath, const int sensor): 
+		mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
+		mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
+		mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
+{
+	// Load camera parameters from settings file
 
-Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const string &str3DPtsFile,const int sensor):
+	cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
+	float fx = fSettings["Camera.fx"];
+	float fy = fSettings["Camera.fy"];
+	float cx = fSettings["Camera.cx"];
+	float cy = fSettings["Camera.cy"];
+
+	cv::Mat K = cv::Mat::eye(3, 3, CV_32F);
+	K.at<float>(0, 0) = fx;
+	K.at<float>(1, 1) = fy;
+	K.at<float>(0, 2) = cx;
+	K.at<float>(1, 2) = cy;
+	K.copyTo(mK);
+
+	cv::Mat DistCoef(4, 1, CV_32F);
+	DistCoef.at<float>(0) = fSettings["Camera.k1"];
+	DistCoef.at<float>(1) = fSettings["Camera.k2"];
+	DistCoef.at<float>(2) = fSettings["Camera.p1"];
+	DistCoef.at<float>(3) = fSettings["Camera.p2"];
+	const float k3 = fSettings["Camera.k3"];
+	if (k3 != 0)
+	{
+		DistCoef.resize(5);
+		DistCoef.at<float>(4) = k3;
+	}
+	DistCoef.copyTo(mDistCoef);
+
+	mbf = fSettings["Camera.bf"];
+
+	float fps = fSettings["Camera.fps"];
+	if (fps == 0)
+		fps = 30;
+
+	// Max/Min Frames to insert keyframes and to check relocalisation
+	mMinFrames = 0;
+	mMaxFrames = fps;
+
+	cout << endl << "Camera Parameters: " << endl;
+	cout << "- fx: " << fx << endl;
+	cout << "- fy: " << fy << endl;
+	cout << "- cx: " << cx << endl;
+	cout << "- cy: " << cy << endl;
+	cout << "- k1: " << DistCoef.at<float>(0) << endl;
+	cout << "- k2: " << DistCoef.at<float>(1) << endl;
+	if (DistCoef.rows == 5)
+		cout << "- k3: " << DistCoef.at<float>(4) << endl;
+	cout << "- p1: " << DistCoef.at<float>(2) << endl;
+	cout << "- p2: " << DistCoef.at<float>(3) << endl;
+	cout << "- fps: " << fps << endl;
+
+
+	int nRGB = fSettings["Camera.RGB"];
+	mbRGB = nRGB;
+
+	if (mbRGB)
+		cout << "- color order: RGB (ignored if grayscale)" << endl;
+	else
+		cout << "- color order: BGR (ignored if grayscale)" << endl;
+
+	// Load ORB parameters
+
+	int nFeatures = fSettings["ORBextractor.nFeatures"];
+	float fScaleFactor = fSettings["ORBextractor.scaleFactor"];
+	int nLevels = fSettings["ORBextractor.nLevels"];
+	int fIniThFAST = fSettings["ORBextractor.iniThFAST"];
+	int fMinThFAST = fSettings["ORBextractor.minThFAST"];
+
+	mpORBextractorLeft = new ORBextractor(nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
+
+	if (sensor == System::STEREO)
+		mpORBextractorRight = new ORBextractor(nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
+
+	if (sensor == System::MONOCULAR)
+		mpIniORBextractor = new ORBextractor(2 * nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
+
+	cout << endl << "ORB Extractor Parameters: " << endl;
+	cout << "- Number of Features: " << nFeatures << endl;
+	cout << "- Scale Levels: " << nLevels << endl;
+	cout << "- Scale Factor: " << fScaleFactor << endl;
+	cout << "- Initial Fast Threshold: " << fIniThFAST << endl;
+	cout << "- Minimum Fast Threshold: " << fMinThFAST << endl;
+
+	if (sensor == System::STEREO || sensor == System::RGBD)
+	{
+		mThDepth = mbf*(float)fSettings["ThDepth"] / fx;
+		cout << endl << "Depth Threshold (Close/Far Points): " << mThDepth << endl;
+	}
+
+	if (sensor == System::RGBD)
+	{
+		mDepthMapFactor = fSettings["DepthMapFactor"];
+		if (fabs(mDepthMapFactor)<1e-5)
+			mDepthMapFactor = 1;
+		else
+			mDepthMapFactor = 1.0f / mDepthMapFactor;
+	}
+}
+	Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const string &str3DPtsFile, const string &str2DPtsFile, const int sensor):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
@@ -76,6 +178,27 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
 		}
 
 		mvARSL3DPts.push_back(cv::Point3f(coord[0], coord[1], coord[2]));
+	}
+
+	ifstream ARSL2DPts(str2DPtsFile);
+	while (ARSL2DPts.good())
+	{
+		getline(ARSL2DPts, line);
+
+		stringstream ss(line);
+		string field;
+		float coord[2];
+		int inc = 0;
+		while (getline(ss, field, ','))
+		{
+			stringstream fs(field);
+			fs >> coord[inc];
+			inc++;
+			if (inc > 1)
+				inc = 0;
+		}
+
+		mvARSL2DPts.push_back(cv::Point2f(coord[0], coord[1]));
 	}
 
     cv::Mat K = cv::Mat::eye(3,3,CV_32F);
@@ -250,8 +373,9 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
         imDepth.convertTo(imDepth,CV_32F,mDepthMapFactor);
 
     mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
-
-    //Track();
+	std::vector<cv::KeyPoint> pts;
+	std::vector<cv::Point3f> pts2;
+	Track(pts, pts2);
 
     return mCurrentFrame.mTcw.clone();
 }
@@ -284,6 +408,35 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
     Track(ARSL2Dpts, ARSL3Dpts);
 
     return mCurrentFrame.mTcw.clone();
+}
+
+cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
+{
+	mImGray = im;
+
+	if (mImGray.channels() == 3)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGB2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGR2GRAY);
+	}
+	else if (mImGray.channels() == 4)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGBA2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
+	}
+
+	if (mState == NOT_INITIALIZED || mState == NO_IMAGES_YET)
+		mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+	else
+		mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+
+	Track();
+
+	return mCurrentFrame.mTcw.clone();
 }
 
 // ARSL Modification, allows for 2D points to be inserted
@@ -393,7 +546,7 @@ void Tracking::Track(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3
                         mCurrentFrame.SetPose(TcwMM);
                         mCurrentFrame.mvpMapPoints = vpMPsMM;
                         mCurrentFrame.mvbOutlier = vbOutMM;
-
+						cv::Mat test = vpMPsMM[0]->GetWorldPos();
                         if(mbVO)
                         {
                             for(int i =0; i<mCurrentFrame.N; i++)
@@ -528,6 +681,245 @@ void Tracking::Track(std::vector<cv::KeyPoint> ARSL2Dpts, std::vector<cv::Point3
 
 }
 
+void Tracking::Track() {
+	if (mState == NO_IMAGES_YET)
+	{
+		mState = NOT_INITIALIZED;
+	}
+
+	mLastProcessedState = mState;
+
+	// Get Map Mutex -> Map cannot be changed
+	unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
+
+	if (mState == NOT_INITIALIZED)
+	{
+		if (mSensor == System::STEREO || mSensor == System::RGBD)
+			StereoInitialization();
+		else
+			MonocularInitialization();
+
+		mpFrameDrawer->Update(this);
+
+		if (mState != OK)
+			return;
+	}
+	else
+	{
+		// System is initialized. Track Frame.
+		bool bOK;
+
+		// Initial camera pose estimation using motion model or relocalization (if tracking is lost)
+		if (!mbOnlyTracking)
+		{
+			// Local Mapping is activated. This is the normal behaviour, unless
+			// you explicitly activate the "only tracking" mode.
+
+			if (mState == OK)
+			{
+				// Local Mapping might have changed some MapPoints tracked in last frame
+				CheckReplacedInLastFrame();
+
+				if (mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId + 2)
+				{
+					bOK = TrackReferenceKeyFrame();
+				}
+				else
+				{
+					bOK = TrackWithMotionModel();
+					if (!bOK)
+						bOK = TrackReferenceKeyFrame();
+				}
+			}
+			else
+			{
+				bOK = Relocalization();
+			}
+		}
+		else
+		{
+			// Localization Mode: Local Mapping is deactivated
+
+			if (mState == LOST)
+			{
+				bOK = Relocalization();
+			}
+			else
+			{
+				if (!mbVO)
+				{
+					// In last frame we tracked enough MapPoints in the map
+
+					if (!mVelocity.empty())
+					{
+						bOK = TrackWithMotionModel();
+					}
+					else
+					{
+						bOK = TrackReferenceKeyFrame();
+					}
+				}
+				else
+				{
+					// In last frame we tracked mainly "visual odometry" points.
+
+					// We compute two camera poses, one from motion model and one doing relocalization.
+					// If relocalization is sucessfull we choose that solution, otherwise we retain
+					// the "visual odometry" solution.
+
+					bool bOKMM = false;
+					bool bOKReloc = false;
+					vector<MapPoint*> vpMPsMM;
+					vector<bool> vbOutMM;
+					cv::Mat TcwMM;
+					if (!mVelocity.empty())
+					{
+						bOKMM = TrackWithMotionModel();
+						vpMPsMM = mCurrentFrame.mvpMapPoints;
+						vbOutMM = mCurrentFrame.mvbOutlier;
+						TcwMM = mCurrentFrame.mTcw.clone();
+					}
+					bOKReloc = Relocalization();
+
+					if (bOKMM && !bOKReloc)
+					{
+						mCurrentFrame.SetPose(TcwMM);
+						mCurrentFrame.mvpMapPoints = vpMPsMM;
+						mCurrentFrame.mvbOutlier = vbOutMM;
+						cv::Mat test = vpMPsMM[0]->GetWorldPos();
+						if (mbVO)
+						{
+							for (int i = 0; i<mCurrentFrame.N; i++)
+							{
+								if (mCurrentFrame.mvpMapPoints[i] && !mCurrentFrame.mvbOutlier[i])
+								{
+									mCurrentFrame.mvpMapPoints[i]->IncreaseFound();
+								}
+							}
+						}
+					}
+					else if (bOKReloc)
+					{
+						mbVO = false;
+					}
+
+					bOK = bOKReloc || bOKMM;
+				}
+			}
+		}
+
+		mCurrentFrame.mpReferenceKF = mpReferenceKF;
+
+		// If we have an initial estimation of the camera pose and matching. Track the local map.
+		if (!mbOnlyTracking)
+		{
+			if (bOK)
+				bOK = TrackLocalMap();
+		}
+		else
+		{
+			// mbVO true means that there are few matches to MapPoints in the map. We cannot retrieve
+			// a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
+			// the camera we will use the local map again.
+			if (bOK && !mbVO)
+				bOK = TrackLocalMap();
+		}
+
+		if (bOK)
+			mState = OK;
+		else
+			mState = LOST;
+
+		// Update drawer
+		mpFrameDrawer->Update(this);
+
+		// If tracking were good, check if we insert a keyframe
+		if (bOK)
+		{
+			// Update motion model
+			if (!mLastFrame.mTcw.empty())
+			{
+				cv::Mat LastTwc = cv::Mat::eye(4, 4, CV_32F);
+				mLastFrame.GetRotationInverse().copyTo(LastTwc.rowRange(0, 3).colRange(0, 3));
+				mLastFrame.GetCameraCenter().copyTo(LastTwc.rowRange(0, 3).col(3));
+				mVelocity = mCurrentFrame.mTcw*LastTwc;
+			}
+			else
+				mVelocity = cv::Mat();
+
+			mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
+
+			// Clean VO matches
+			for (int i = 0; i<mCurrentFrame.N; i++)
+			{
+				MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
+				if (pMP)
+					if (pMP->Observations()<1)
+					{
+						mCurrentFrame.mvbOutlier[i] = false;
+						mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+					}
+			}
+
+			// Delete temporal MapPoints
+			for (list<MapPoint*>::iterator lit = mlpTemporalPoints.begin(), lend = mlpTemporalPoints.end(); lit != lend; lit++)
+			{
+				MapPoint* pMP = *lit;
+				delete pMP;
+			}
+			mlpTemporalPoints.clear();
+
+			// Check if we need to insert a new keyframe
+			if (NeedNewKeyFrame())
+				CreateNewKeyFrame();
+
+			// We allow points with high innovation (considererd outliers by the Huber Function)
+			// pass to the new keyframe, so that bundle adjustment will finally decide
+			// if they are outliers or not. We don't want next frame to estimate its position
+			// with those points so we discard them in the frame.
+			for (int i = 0; i<mCurrentFrame.N; i++)
+			{
+				if (mCurrentFrame.mvpMapPoints[i] && mCurrentFrame.mvbOutlier[i])
+					mCurrentFrame.mvpMapPoints[i] = static_cast<MapPoint*>(NULL);
+			}
+		}
+
+		// Reset if the camera get lost soon after initialization
+		if (mState == LOST)
+		{
+			if (mpMap->KeyFramesInMap() <= 5)
+			{
+				cout << "Track lost soon after initialisation, reseting..." << endl;
+				mpSystem->Reset();
+				return;
+			}
+		}
+
+		if (!mCurrentFrame.mpReferenceKF)
+			mCurrentFrame.mpReferenceKF = mpReferenceKF;
+
+		mLastFrame = Frame(mCurrentFrame);
+	}
+
+	// Store frame pose information to retrieve the complete camera trajectory afterwards.
+	if (!mCurrentFrame.mTcw.empty())
+	{
+		cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
+		mlRelativeFramePoses.push_back(Tcr);
+		mlpReferences.push_back(mpReferenceKF);
+		mlFrameTimes.push_back(mCurrentFrame.mTimeStamp);
+		mlbLost.push_back(mState == LOST);
+	}
+	else
+	{
+		// This can happen if tracking is lost
+		mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+		mlpReferences.push_back(mlpReferences.back());
+		mlFrameTimes.push_back(mlFrameTimes.back());
+		mlbLost.push_back(mState == LOST);
+	}
+
+}
 
 void Tracking::StereoInitialization()
 {
@@ -709,17 +1101,23 @@ void Tracking::MonocularInitialization(std::vector<cv::KeyPoint> ARSL2Dpts, std:
 		cv::Mat tcw; // Current Camera Translation
 		vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
 
-		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated, mvARSL3DPts))
+		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated, mvARSL2DPts, mvARSL3DPts))
 		{
+			int pxCount = 0;
 			for (size_t i = 0, iend = mvIniMatches.size(); i<iend; i++)
 			{
 				if (mvIniMatches[i] >= 0 && !vbTriangulated[i])
 				{
+					//mvIniMatches[i] = -1;
+					//pxCount++;
 					mvIniMatches[i] = -1;
 					nmatches--;
 				}
+				//else
+				//	mvIniMatches[i] = -1;
 			}
-
+			//nmatches = pxCount;
+			
 			// Set Frame Poses
 			mInitialFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
 			cv::Mat Tcw = cv::Mat::eye(4, 4, CV_32F);
@@ -732,6 +1130,85 @@ void Tracking::MonocularInitialization(std::vector<cv::KeyPoint> ARSL2Dpts, std:
 	}
 }
 // End ARSL Modification
+
+void Tracking::MonocularInitialization()
+{
+	if (!mpInitializer)
+	{
+		// Set Reference Frame
+		if (mCurrentFrame.mvKeys.size()>100)
+		{
+			mInitialFrame = Frame(mCurrentFrame);
+			mLastFrame = Frame(mCurrentFrame);
+			mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
+			for (size_t i = 0; i<mCurrentFrame.mvKeysUn.size(); i++)
+				mvbPrevMatched[i] = mCurrentFrame.mvKeysUn[i].pt;
+
+			if (mpInitializer)
+				delete mpInitializer;
+
+			mpInitializer = new Initializer(mCurrentFrame, 1.0, 200);
+
+			fill(mvIniMatches.begin(), mvIniMatches.end(), -1);
+
+			return;
+		}
+	}
+	else
+	{
+		// Try to initialize
+		if ((int)mCurrentFrame.mvKeys.size() <= 100)
+		{
+			delete mpInitializer;
+			mpInitializer = static_cast<Initializer*>(NULL);
+			fill(mvIniMatches.begin(), mvIniMatches.end(), -1);
+			return;
+		}
+
+		// Find correspondences
+		ORBmatcher matcher(0.9, true);
+		int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, mvbPrevMatched, mvIniMatches, 100);
+
+		// Check if there are enough correspondences
+		if (nmatches<100)
+		{
+			delete mpInitializer;
+			mpInitializer = static_cast<Initializer*>(NULL);
+			return;
+		}
+
+		cv::Mat Rcw; // Current Camera Rotation
+		cv::Mat tcw; // Current Camera Translation
+		vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
+
+		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated, mvARSL2DPts, mvARSL3DPts))
+		{
+			int pxCount = 0;
+			for (size_t i = 0, iend = mvIniMatches.size(); i<iend; i++)
+			{
+				if (mvIniMatches[i] >= 0 && !vbTriangulated[i])
+				{
+					//mvIniMatches[i] = -1;
+					//pxCount++;
+					mvIniMatches[i] = -1;
+					nmatches--;
+				}
+				//else
+				//	mvIniMatches[i] = -1;
+			}
+			//nmatches = pxCount;
+
+			// Set Frame Poses
+			mInitialFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
+			cv::Mat Tcw = cv::Mat::eye(4, 4, CV_32F);
+			Rcw.copyTo(Tcw.rowRange(0, 3).colRange(0, 3));
+			tcw.copyTo(Tcw.rowRange(0, 3).col(3));
+			mCurrentFrame.SetPose(Tcw);
+
+			CreateInitialMapMonocular();
+		}
+	}
+}
 
 // Begin ARSL Addition
 void Tracking::set3DPoints(std::vector<cv::Point3f> ARSL3DPts)

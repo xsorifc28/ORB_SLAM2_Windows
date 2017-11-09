@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     const int nImages = vstrImageLeft.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::STEREO,true);
+    //ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::STEREO,true);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;
@@ -76,38 +76,38 @@ int main(int argc, char **argv)
             return 1;
         }
 
-#ifdef COMPILEDWITHC11
-        std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-#else
-        std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
-#endif
+//#ifdef COMPILEDWITHC11
+//        std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//#else
+//        std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+//#endif
 
         // Pass the image to the SLAM system
-        SLAM.TrackStereo(imLeft,imRight,tframe);        
+        //SLAM.TrackStereo(imLeft,imRight,tframe);        
 
-#ifdef COMPILEDWITHC11
-        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-#else
-        std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
-#endif
-
-        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-
-        vTimesTrack[ni]=ttrack;
-
-        // Wait to load the next frame
-        double T=0;
-        if(ni<nImages-1)
-            T = vTimestamps[ni+1]-tframe;
-        else if(ni>0)
-            T = tframe-vTimestamps[ni-1];
-
-        if(ttrack<T)
-            usleep((T-ttrack)*1e6);
+//#ifdef COMPILEDWITHC11
+//        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//#else
+//        std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+//#endif
+//
+//        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+//
+//        vTimesTrack[ni]=ttrack;
+//
+//        // Wait to load the next frame
+//        double T=0;
+//        if(ni<nImages-1)
+//            T = vTimestamps[ni+1]-tframe;
+//        else if(ni>0)
+//            T = tframe-vTimestamps[ni-1];
+//
+//        if(ttrack<T)
+//            usleep((T-ttrack)*1e6);
     }
 
     // Stop all threads
-    SLAM.Shutdown();
+    //SLAM.Shutdown();
 
     // Tracking time statistics
     sort(vTimesTrack.begin(),vTimesTrack.end());
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
     cout << "mean tracking time: " << totaltime/nImages << endl;
 
     // Save camera trajectory
-    SLAM.SaveTrajectoryKITTI("CameraTrajectory.txt");
+    //SLAM.SaveTrajectoryKITTI("CameraTrajectory.txt");
 
     return 0;
 }
@@ -156,7 +156,7 @@ void LoadImages(const string &strPathToSequence, vector<string> &vstrImageLeft,
     for(int i=0; i<nTimes; i++)
     {
         stringstream ss;
-        ss << setfill('0') << setw(6) << i;
+       // ss << setfill('0') << setw(6) << i;
         vstrImageLeft[i] = strPrefixLeft + ss.str() + ".png";
         vstrImageRight[i] = strPrefixRight + ss.str() + ".png";
     }

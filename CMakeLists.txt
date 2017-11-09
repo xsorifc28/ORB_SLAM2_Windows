@@ -37,10 +37,10 @@ IF(WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 ENDIF()
 
-set(OpenCV_DIR C:/Libraries/Build/OpenCV)
+set(OpenCV_DIR C:/Libraries/Build/OpenCV-3.3.0/install)
 
 set(OpenCV_STATIC OFF)
-find_package(OpenCV 3.1.0 REQUIRED)
+find_package(OpenCV 3.3.0 REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 

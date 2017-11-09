@@ -35,6 +35,14 @@ FrameDrawer::FrameDrawer(Map* pMap):mpMap(pMap)
     mIm = cv::Mat(480,640,CV_8UC3, cv::Scalar(0,0,0));
 }
 
+// Begin ARSL Addition
+FrameDrawer::FrameDrawer(Map * pMap, cv::Mat mARImIn):mpMap(pMap),mARIm(mARImIn)
+{
+	mState = Tracking::SYSTEM_NOT_READY;
+	mIm = cv::Mat(480, 640, CV_8UC3, cv::Scalar(0, 0, 0));
+}
+// End ARSL Addition
+
 cv::Mat FrameDrawer::DrawFrame()
 {
     cv::Mat im;
@@ -106,9 +114,32 @@ cv::Mat FrameDrawer::DrawFrame()
                 // This is a match to a MapPoint in the map
                 if(vbMap[i])
                 {
+					 
                     cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
                     cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
                     mnTracked++;
+					
+					// Begin ARSL Addition
+					if (!found) {
+						if (abs(drawPt.x - vCurrentKeys[i].pt.x) < 10 && abs(drawPt.y - vCurrentKeys[i].pt.y) < 10) {
+							found = true;
+							drawKeyPt = vCurrentKeys[i];
+							mp = i;
+						}
+					}
+					else {
+						if (i == mp) {
+							int x = vCurrentKeys[i].pt.x;
+							int y = vCurrentKeys[i].pt.x;
+							int rows = mARIm.rows;
+							int cols = mARIm.cols;
+
+							if ((mARIm.data) && (x + cols < im.cols) && (y + rows < im.rows)) {
+								mARIm.copyTo(im(cv::Rect(x, y, cols, rows)));
+							}
+						}
+					}
+					// End ARSL Addition
                 }
                 else // This is match to a "visual odometry" MapPoint created in the last frame
                 {
@@ -174,8 +205,10 @@ void FrameDrawer::Update(Tracking *pTracker)
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
+	
 
-
+	//std::set<MapPoint*>test = pTracker->mCurrentFrame.mpReferenceKF->GetMapPoints();
+	
     if(pTracker->mLastProcessedState==Tracking::NOT_INITIALIZED)
     {
         mvIniKeys=pTracker->mInitialFrame.mvKeys;

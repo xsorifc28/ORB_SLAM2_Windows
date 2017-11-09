@@ -41,6 +41,9 @@ class FrameDrawer
 {
 public:
     FrameDrawer(Map* pMap);
+	//Begin ARSL Addition
+	FrameDrawer(Map* pMap, cv::Mat mARImIn);
+	//End ARSL Addition
 
     // Update info from the last processed frame.
     void Update(Tracking *pTracker);
@@ -51,6 +54,14 @@ public:
 protected:
 
     void DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText);
+
+	//Begin ARSL Addition
+	cv::Mat mARIm;
+	cv::KeyPoint drawKeyPt;
+	cv::Point2i drawPt = cv::Point2i(200, 200);
+	bool found = false;
+	int mp;
+	//End ARSL Addition
 
     // Info of the frame to be drawn
     cv::Mat mIm;

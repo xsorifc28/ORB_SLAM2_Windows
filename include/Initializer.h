@@ -40,11 +40,10 @@ public:
     // Computes in parallel a fundamental matrix and a homography
     // Selects a model and tries to recover the motion and the structure from motion
     bool Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12,
-                    cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point3f> &vARSL3DPts);
+                    cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point2f> &vARSL2DPts,vector<cv::Point3f> &vARSL3DPts);
 
 
 private:
-
     void FindHomography(vector<bool> &vbMatchesInliers, float &score, cv::Mat &H21);
     void FindFundamental(vector<bool> &vbInliers, float &score, cv::Mat &F21);
 

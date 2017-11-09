@@ -467,8 +467,8 @@ int ORBmatcher::SearchForInitialization(Frame &F1, Frame &F2, vector<cv::Point2f
             {
                 if(vnMatches21[bestIdx2]>=0)
                 {
-                    vnMatches12[vnMatches21[bestIdx2]]=-1;
-                    nmatches--;
+                    //vnMatches12[vnMatches21[bestIdx2]]=-1;
+                    //nmatches--;
                 }
                 vnMatches12[i1]=bestIdx2;
                 vnMatches21[bestIdx2]=i1;
@@ -508,8 +508,8 @@ int ORBmatcher::SearchForInitialization(Frame &F1, Frame &F2, vector<cv::Point2f
                 int idx1 = rotHist[i][j];
                 if(vnMatches12[idx1]>=0)
                 {
-                    vnMatches12[idx1]=-1;
-                    nmatches--;
+                    //vnMatches12[idx1]=-1;
+                    //nmatches--;
                 }
             }
         }
