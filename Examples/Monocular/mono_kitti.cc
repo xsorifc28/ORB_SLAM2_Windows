@@ -102,7 +102,8 @@ int main(int argc, char **argv)
 		vector<cv::Point3f> ARSL3DPts;
 
         // Pass the image to the SLAM system
-        SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
+        //SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
+		SLAM.TrackMonocular(im, tframe);
 		ARSL2DPts = SLAM.get2DPts();
 		//vector<ORB_SLAM2::MapPoint*> test = SLAM.OutputAllMapPoints();
 
