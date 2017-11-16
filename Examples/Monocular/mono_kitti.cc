@@ -29,72 +29,82 @@
 
 #include"System.h"
 #include "MapPoint.h"
+#include "config.h"
+
+#define USE_JOHN_FACE
 
 using namespace std;
 
 void LoadImages(const string &strSequence, vector<string> &vstrImageFilenames,
                 vector<double> &vTimestamps);
 
-int main(int argc, char **argv)
-{
-    /*if(argc != 4)
-    {
-        cerr << endl << "Usage: ./mono_kitti path_to_vocabulary path_to_settings path_to_sequence" << endl;
-        return 1;
-    }*/
-	std::string dataPath = "C:/Libraries/Source/ORB_SLAM2_Windows/Examples/Monocular/data/";
+int main(int argc, char **argv) {
+	/*if(argc != 4)
+	{
+	cerr << endl << "Usage: ./mono_kitti path_to_vocabulary path_to_settings path_to_sequence" << endl;
+	return 1;
+	}*/
 
-	//std::string videoFile = dataPath + "ORBSLAM_Example_Video.mp4";
-	std::string videoFile = dataPath + "john-face.mp4";
-	//std::string videoFile = dataPath + "bust.mp4";
-	std::string voc = dataPath + "ORBvoc_new.txt";
-	std::string settings = dataPath + "john-face-settings.yaml";
-	//std::string settings = dataPath + "Settings_Complete.yaml";
-	//std::string settings = dataPath + "2-14-calib.yaml";
-	std::string ARSL3D = dataPath + "ARSL3DPts.csv";
-	std::string ARSL2D = dataPath + "ARSL2DPts.csv";
+	//#ifdef USE_JOHN_FACE
+	//	std::string dataPath = "C:\\Users\\User\\Source\\Repos\\ARSL_v3.0_CalibrationData\\calibration-6-18\\tracking\\"/*"C:\\Users\\User\\Source\\Repos\\ORB_SLAM2_Windows_samed\\data\\"*/;
+	//
+	//	std::string videoFile = dataPath + "john-face.mp4"/*"ORBSLAM_Example_Video.mp4"*/;
+	//	std::string voc = /*dataPath*/ "C:\\Users\\User\\Source\\Repos\\ORB_SLAM2_Windows_samed\\data\\ORBvoc_new\\ORBvoc_new.txt";
+	//	std::string settings = dataPath + "john-face-settings.yaml"/*"Settings_Complete.yaml"*/;
+	//#else
+	//	std::string dataPath = "C:\\Users\\User\\Source\\Repos\\ORB_SLAM2_Windows_samed\\data\\";
+	//
+	//	std::string videoFile = dataPath + "ORBSLAM_Example_Video.mp4";
+	//	std::string voc = /*dataPath*/ "C:\\Users\\User\\Source\\Repos\\ORB_SLAM2_Windows_samed\\data\\ORBvoc_new\\ORBvoc_new.txt";
+	//	std::string settings = dataPath + "Settings_Complete.yaml";
+	//#endif
 
-	std::string ARIm = dataPath + "ARIm.png";
+	std::string dataPath = "C:\\Users\\User\\Source\\Repos\\ARSL_v3.0_CalibrationData\\calibration-6-18\\tracking\\"/*"C:\\Users\\User\\Source\\Repos\\ORB_SLAM2_Windows_samed\\data\\"*/;
 
-    // Retrieve paths to images
+	std::string videoFile = VIDEO_PATH;
+	std::string voc = VOCAB_PATH;
+	std::string settings = SETTINGS_PATH;
+	std::string arsl2d = ARSL2D;
+	std::string arsl3d = ARSL3D;
+
+	// Retrieve paths to images
 	vector<string> vstrImageFilenames;
-    vector<double> vTimestamps;
-    //LoadImages(string(argv[3]), vstrImageFilenames, vTimestamps);
-	cv::Mat dispIm = cv::imread(ARIm, CV_LOAD_IMAGE_COLOR);
-    //int nImages = vstrImageFilenames.size();
+	vector<double> vTimestamps;
+	//LoadImages(string(argv[3]), vstrImageFilenames, vTimestamps);
+	cv::Mat dispIm = cv::imread(ARSL_IMAGE, CV_LOAD_IMAGE_COLOR);
+	//int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
 	ORB_SLAM2::System SLAM(voc, settings, ARSL3D, ARSL2D, cv::Mat(), ORB_SLAM2::System::MONOCULAR, true);
 	//ORB_SLAM2::System SLAM(voc, settings, ORB_SLAM2::System::MONOCULAR, true);
-    // Vector for tracking time statistics
-    vector<double> vTimesTrack;
-    //vTimesTrack.resize(nImages);
+	// Vector for tracking time statistics
+	vector<double> vTimesTrack;
+	//vTimesTrack.resize(nImages);
 
-    cout << endl << "-------" << endl;
-    cout << "Start processing sequence ..." << endl;
-    //cout << "Images in the sequence: " << nImages << endl << endl;
+	std::cout << endl << "-------" << endl;
+	std::cout << "Start processing sequence ..." << endl;
+	//cout << "Images in the sequence: " << nImages << endl << endl;
 
-    // Main loop
+	// Main loop
 	bool open = true;
 	cv::VideoCapture cap;
 	open = cap.open(videoFile);
-    cv::Mat im;
+	cv::Mat im;
 	int ni = 0;
-    //for(int ni=0; ni<nImages; ni++)
+	//for(int ni=0; ni<nImages; ni++)
 	while (open) {
 		open = cap.read(im);
 		if (!open)
 			break;
 
-        // Read image and depthmap from file
-        //im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
+		// Read image and depthmap from file
+		//im = cv::imread(vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
 		double tframe = 33.3; // vTimestamps[ni];
 
-        if(im.empty())
-        {
-            cerr << endl << "Failed to load image at: " << vstrImageFilenames[ni] << endl;
-            return 1;
-        }
+		if (im.empty()) {
+			cerr << endl << "Failed to load image at: " << vstrImageFilenames[ni] << endl;
+			return 1;
+		}
 
 		double ttrack = (double)cv::getTickCount();
 
@@ -113,20 +123,21 @@ int main(int argc, char **argv)
 		//	outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
 		//outputFile.close();
 
+		SLAM.TrackMonocular(im, tframe);
 
 		ttrack = 1000 * (((double)cv::getTickCount() - ttrack) / cv::getTickFrequency());
 		//printf("Total: %f\n", ttrack);
 
-        //double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+		//double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
 		//printf("TRACKED: %f\n", ttrack);
-        vTimesTrack.push_back(ttrack);
+		vTimesTrack.push_back(ttrack);
 
-        /*// Wait to load the next frame
-        double T=0;
-        if(ni<nImages-1)
-            T = vTimestamps[ni+1]-tframe;
-        else if(ni>0)
-            T = tframe-vTimestamps[ni-1];
+		/*// Wait to load the next frame
+		double T=0;
+		if(ni<nImages-1)
+		T = vTimestamps[ni+1]-tframe;
+		else if(ni>0)
+		T = tframe-vTimestamps[ni-1];
 
 		if (ttrack < T) {
 			//usleep((T - ttrack)*1e6);
@@ -134,24 +145,23 @@ int main(int argc, char **argv)
 		}*/
     }
 
-    // Stop all threads
-    SLAM.Shutdown();
+	// Stop all threads
+	SLAM.Shutdown();
 
-    // Tracking time statistics
-    //sort(vTimesTrack.begin(),vTimesTrack.end());
-    double totaltime = 0;
-	for (int ni = 0; ni<vTimesTrack.size(); ni++)
-    {
-        totaltime+=vTimesTrack[ni];
-    }
-    cout << "-------" << endl << endl;
-    //cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
-	cout << "mean tracking time: " << totaltime / ((double)vTimesTrack.size()) << endl;
+	// Tracking time statistics
+	//sort(vTimesTrack.begin(),vTimesTrack.end());
+	double totaltime = 0;
+	for (int ni = 0; ni<vTimesTrack.size(); ni++) {
+		totaltime += vTimesTrack[ni];
+	}
+	std::cout << "-------" << endl << endl;
+	//cout << "median tracking time: " << vTimesTrack[nImages/2] << endl;
+	std::cout << "mean tracking time: " << totaltime / ((double)vTimesTrack.size()) << endl;
 
-    // Save camera trajectory
-    SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+	// Save camera trajectory
+	SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
 
-    return 0;
+	return 0;
 }
 
 void LoadImages(const string &strPathToSequence, vector<string> &vstrImageFilenames, vector<double> &vTimestamps)
