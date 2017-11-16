@@ -122,21 +122,22 @@ bool Initializer::Initialize(const Frame & CurrentFrame, const vector<int>& vMat
 }
 
 bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12, cv::Mat &R21, cv::Mat &t21,
-                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point2f> &vARSL2DPts, vector<cv::Point3f> &vARSL3DPts)
+                             vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::KeyPoint> &vARSL2DPts, vector<cv::Point3f> &vARSL3DPts)
 {
 	mvKeys1 = CurrentFrame.mvKeysUn;
-	float minX = vARSL2DPts[0].x; float minY = vARSL2DPts[0].y; float maxX = minX; float maxY = minY;
+	float minX = vARSL2DPts[0].pt.x; float minY = vARSL2DPts[0].pt.y; float maxX = minX; float maxY = minY;
 	
 	for (size_t i = 0, iend = vARSL2DPts.size(); i < iend; i++)
 	{
-		if (vARSL2DPts[i].x < minX)
-			minX = vARSL2DPts[i].x;
-		if (vARSL2DPts[i].y < minY)
-			minY = vARSL2DPts[i].y;
-		if (vARSL2DPts[i].x > maxX)
-			maxX = vARSL2DPts[i].x;
-		if (vARSL2DPts[i].y > maxY)
-			maxY = vARSL2DPts[i].y;
+		cv::Point2f curPt = vARSL2DPts[i].pt;
+		if (curPt.x < minX)
+			minX = curPt.x;
+		if (curPt.y < minY)
+			minY = curPt.y;
+		if (curPt.x > maxX)
+			maxX = curPt.x;
+		if (curPt.y > maxY)
+			maxY = curPt.y;
 	}
 
 	for (size_t i = 0, iend = mvKeys1.size(); i < iend; i++)
@@ -152,7 +153,7 @@ bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatc
 		
 		for (size_t j = 0, jend = vARSL3DPts.size(); j < jend; j++)
 		{
-			cv::Point2f curARSL2DPt = vARSL2DPts[j];
+			cv::Point2f curARSL2DPt = vARSL2DPts[j].pt;
 			cv::Point3f curARSL3DPt = vARSL3DPts[j];
 			if (cv::norm(cv::Point2f(curSLAMPt.pt.x, curSLAMPt.pt.y) - cv::Point2f(curARSL2DPt.x, curARSL2DPt.y)) < 1)//((mvKeys2[i].pt.x - vARSL3DPts[j].x) < 1) && ((mvKeys2[i].pt.y - vARSL3DPts[j].y) < 1))
 			{

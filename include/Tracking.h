@@ -105,7 +105,7 @@ public:
     std::vector<cv::Point2f> mvbPrevMatched;
     std::vector<cv::Point3f> mvIniP3D;
 	std::vector<cv::Point3f> mvARSL3DPts;
-	std::vector<cv::Point2f> mvARSL2DPts;
+	std::vector<cv::KeyPoint> mvARSL2DPts;
     Frame mInitialFrame;
 
     // Lists used to recover the full camera trajectory at the end of the execution.

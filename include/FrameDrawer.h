@@ -57,8 +57,8 @@ protected:
 
 	//Begin ARSL Addition
 	cv::Mat mARIm;
-	cv::KeyPoint drawKeyPt;
-	cv::Point2i drawPt = cv::Point2i(200, 200);
+	MapPoint* drawMapPoint;
+	cv::Point2i drawPt = cv::Point2i(473, 300);
 	bool found = false;
 	int mp;
 	//End ARSL Addition
@@ -66,6 +66,7 @@ protected:
     // Info of the frame to be drawn
     cv::Mat mIm;
     int N;
+	vector<MapPoint*> mvMapPoints;
     vector<cv::KeyPoint> mvCurrentKeys;
     vector<bool> mvbMap, mvbVO;
     bool mbOnlyTracking;

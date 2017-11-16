@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     //int nImages = vstrImageFilenames.size();
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-	ORB_SLAM2::System SLAM(voc, settings, ARSL3D, ARSL2D, dispIm, ORB_SLAM2::System::MONOCULAR, true);
+	ORB_SLAM2::System SLAM(voc, settings, ARSL3D, ARSL2D, cv::Mat(), ORB_SLAM2::System::MONOCULAR, true);
 	//ORB_SLAM2::System SLAM(voc, settings, ORB_SLAM2::System::MONOCULAR, true);
     // Vector for tracking time statistics
     vector<double> vTimesTrack;
@@ -102,8 +102,8 @@ int main(int argc, char **argv)
 		vector<cv::Point3f> ARSL3DPts;
 
         // Pass the image to the SLAM system
-        //SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
-		SLAM.TrackMonocular(im, tframe);
+        SLAM.TrackMonocular(im,tframe, ARSL2DPts, ARSL3DPts);
+		//SLAM.TrackMonocular(im, tframe);
 		ARSL2DPts = SLAM.get2DPts();
 		//vector<ORB_SLAM2::MapPoint*> test = SLAM.OutputAllMapPoints();
 

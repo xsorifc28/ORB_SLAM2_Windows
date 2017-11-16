@@ -197,8 +197,8 @@ namespace ORB_SLAM2
 			if (inc > 1)
 				inc = 0;
 		}
-
-		mvARSL2DPts.push_back(cv::Point2f(coord[0], coord[1]));
+		
+		mvARSL2DPts.push_back(cv::KeyPoint(cv::Point2f(coord[0], coord[1]), 1.0f));
 	}
 
     cv::Mat K = cv::Mat::eye(3,3,CV_32F);
@@ -405,7 +405,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
     else
         mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
-    Track(ARSL2Dpts, ARSL3Dpts);
+    Track(mvARSL2DPts, mvARSL3DPts);
 
     return mCurrentFrame.mTcw.clone();
 }

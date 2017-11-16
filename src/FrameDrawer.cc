@@ -49,6 +49,7 @@ cv::Mat FrameDrawer::DrawFrame()
     vector<cv::KeyPoint> vIniKeys; // Initialization: KeyPoints in reference frame
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
+	vector<MapPoint*> vMapPoints;
     vector<bool> vbVO, vbMap; // Tracked MapPoints in current frame
     int state; // Tracking state
 	int Num;
@@ -70,6 +71,7 @@ cv::Mat FrameDrawer::DrawFrame()
         else if(mState==Tracking::OK)
         {
             vCurrentKeys = mvCurrentKeys;
+			vMapPoints = mvMapPoints;
             vbVO = mvbVO;
             vbMap = mvbMap;
 			Num = N;
@@ -123,7 +125,7 @@ cv::Mat FrameDrawer::DrawFrame()
 					if (!found) {
 						if (abs(drawPt.x - vCurrentKeys[i].pt.x) < 10 && abs(drawPt.y - vCurrentKeys[i].pt.y) < 10) {
 							found = true;
-							drawKeyPt = vCurrentKeys[i];
+							drawMapPoint = vMapPoints[i];
 							mp = i;
 						}
 					}
@@ -131,6 +133,8 @@ cv::Mat FrameDrawer::DrawFrame()
 						if (i == mp) {
 							int x = vCurrentKeys[i].pt.x;
 							int y = vCurrentKeys[i].pt.x;
+							//int x = (int)vMapPoints[i]->mTrackProjX;
+							//int y = (int)vMapPoints[i]->mTrackProjY;
 							int rows = mARIm.rows;
 							int cols = mARIm.cols;
 
@@ -201,6 +205,7 @@ void FrameDrawer::Update(Tracking *pTracker)
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
     mvCurrentKeys=pTracker->mCurrentFrame.mvKeys;
+	mvMapPoints = pTracker->mCurrentFrame.mvpMapPoints;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);

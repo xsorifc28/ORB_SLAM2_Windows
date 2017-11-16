@@ -42,7 +42,7 @@ public:
 	bool Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12,
 		cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated);
     bool Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12,
-                    cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::Point2f> &vARSL2DPts,vector<cv::Point3f> &vARSL3DPts);
+                    cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, vector<cv::KeyPoint> &vARSL2DPts,vector<cv::Point3f> &vARSL3DPts);
 
 
 private:
