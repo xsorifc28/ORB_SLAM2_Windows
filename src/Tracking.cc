@@ -158,6 +158,30 @@ namespace ORB_SLAM2
     float cx = fSettings["Camera.cx"];
     float cy = fSettings["Camera.cy"];
 
+	cv::FileStorage ARSL3DPts(str3DPtsFile, cv::FileStorage::READ);
+	cv::FileNode n = ARSL3DPts["data"];
+	
+	cv::FileNodeIterator it = n.begin(), itEnd = n.end();
+
+	for (; it != itEnd; ++it) {
+		cv::Point3f curPt;
+		it >> curPt;
+		mvARSL3DPts.push_back(curPt);
+	}
+
+	cv::FileStorage ARSL2DPts(str2DPtsFile, cv::FileStorage::READ);
+	n = ARSL2DPts["data"];
+	it = n.begin(), itEnd = n.end();
+
+	for (; it != itEnd; ++it) {
+		cv::Point2f curPt;
+		it >> curPt;
+
+		mvARSL2DPts.push_back(cv::KeyPoint(curPt, 1));
+	}
+
+	/*
+
 	string line;
 	ifstream ARSL3DPts(str3DPtsFile);
 	while (ARSL3DPts.good())
@@ -199,7 +223,7 @@ namespace ORB_SLAM2
 		}
 		
 		mvARSL2DPts.push_back(cv::KeyPoint(cv::Point2f(coord[0], coord[1]), 1.0f));
-	}
+	}*/
 
     cv::Mat K = cv::Mat::eye(3,3,CV_32F);
     K.at<float>(0,0) = fx;
