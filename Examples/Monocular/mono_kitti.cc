@@ -59,8 +59,6 @@ int main(int argc, char **argv) {
 	//	std::string settings = dataPath + "Settings_Complete.yaml";
 	//#endif
 
-	std::string dataPath = "C:\\Users\\User\\Source\\Repos\\ARSL_v3.0_CalibrationData\\calibration-6-18\\tracking\\"/*"C:\\Users\\User\\Source\\Repos\\ORB_SLAM2_Windows_samed\\data\\"*/;
-
 	std::string videoFile = VIDEO_PATH;
 	std::string voc = VOCAB_PATH;
 	std::string settings = SETTINGS_PATH;
@@ -123,7 +121,7 @@ int main(int argc, char **argv) {
 		//	outputFile << ARSL2DPts[i].pt.x << ", " << ARSL2DPts[i].pt.y << endl;
 		//outputFile.close();
 
-		SLAM.TrackMonocular(im, tframe);
+		//SLAM.TrackMonocular(im, tframe);
 
 		ttrack = 1000 * (((double)cv::getTickCount() - ttrack) / cv::getTickFrequency());
 		//printf("Total: %f\n", ttrack);
